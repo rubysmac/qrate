@@ -11,8 +11,8 @@ const CurationScreen = () => {
         const fetchPlaylists = async () => {
             try {
                 const { data, error } = await supabase
-                    .from('playlists')
-                    .select('id, name, description, created_at')
+                    .from('curations')
+                    .select('id, title, description, created_at')
                     .order('created_at', { ascending: false });
                 if (error) throw error;
                 setPlaylists(data);
@@ -35,7 +35,7 @@ const CurationScreen = () => {
                 keyExtractor={(item) => item.id.toString()}
                 renderItem={({ item }) => (
                     <View style={styles.playlistContainer}>
-                        <Text style={styles.playlistName}>{item.name}</Text>
+                        <Text style={styles.playlistName}>{item.title}</Text>
                         <Text style={styles.playlistDescription}>{item.description}</Text>
                     </View>
                 )}

@@ -1,43 +1,48 @@
-// src/screens/HomeScreen.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { View, Text, FlatList, Image, ActivityIndicator, StyleSheet, Animated } from 'react-native';
-import { supabase } from '../services/supabase';
+import { supabase } from "../services/supabaseClient";
 import { fetchPostsWithAI } from '../services/huggingface';
 
 const HomeScreen = () => {
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
-    const fadeAnim = new Animated.Value(0);
+    const fadeAnim = useRef(new Animated.Value(0)).current; // ✅ useRef for performance
+
+    // ✅ Memoized function to prevent stale state issues
+    const loadPosts = useCallback(async () => {
+        try {
+            const data = await fetchPostsWithAI(); // Fetch AI-ranked posts
+            setPosts(data);
+            Animated.timing(fadeAnim, {
+                toValue: 1,
+                duration: 500,
+                useNativeDriver: true,
+            }).start();
+        } catch (error) {
+            console.error('Error fetching posts:', error);
+        } finally {
+            setLoading(false);
+        }
+    }, [fadeAnim]); // ✅ Add dependencies
 
     useEffect(() => {
-        const loadPosts = async () => {
-            try {
-                const data = await fetchPostsWithAI(); // Fetch AI-ranked posts
-                setPosts(data);
-                Animated.timing(fadeAnim, {
-                    toValue: 1,
-                    duration: 500,
-                    useNativeDriver: true,
-                }).start();
-            } catch (error) {
-                console.error('Error fetching posts:', error);
-            } finally {
-                setLoading(false);
-            }
-        };
-        
-        const subscribeToUpdates = supabase
-            .from('recognition_points')
-            .on('INSERT', () => {
-                loadPosts();
-            })
+        const channel = supabase
+            .channel("recognition_points_changes")
+            .on(
+                "postgres_changes",
+                { event: "INSERT", schema: "public", table: "recognition_points" },
+                () => {
+                    loadPosts(); // ✅ Always use the latest function reference
+                }
+            )
             .subscribe();
-        
-        loadPosts();
+
+        loadPosts(); // Initial load
+
         return () => {
-            supabase.removeSubscription(subscribeToUpdates);
+            supabase.removeChannel(channel); // ✅ Correct cleanup method
         };
-    }, []);
+    }, [loadPosts]); // ✅ Add `loadPosts` dependency
 
     if (loading) return <ActivityIndicator size="large" color="#FF5A75" />;
 
@@ -45,7 +50,7 @@ const HomeScreen = () => {
         <Animated.View style={[styles.container, { opacity: fadeAnim }]}> 
             <FlatList
                 data={posts}
-                keyExtractor={(item) => item.id}
+                keyExtractor={(item) => String(item.id)} // ✅ Ensure key is a string
                 renderItem={({ item }) => (
                     <View style={styles.postContainer}>
                         <View style={styles.userInfo}>

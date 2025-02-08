@@ -1,4 +1,4 @@
-// App.tsx
+import 'react-native-url-polyfill/auto';
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -12,10 +12,6 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { View, Text } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { registerRootComponent } from 'expo';
-import AppNavigator from './src/navigation/AppNavigator';
-
-
-
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -68,8 +64,5 @@ const App = () => {
   );
 };
 
-
-// Ensure the main component is registered
-registerRootComponent(App);
+registerRootComponent(App); // ✅ Ensure this is at the bottom for Expo projects
 export default App;
-
